@@ -287,82 +287,85 @@ export default function SuperAdminPage() {
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {hostels.map((hostel) => (
-              <div key={hostel.id} className="bg-white rounded-2xl p-5 shadow-sm">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="font-bold text-lg text-gray-900">{hostel.name}</h3>
-                    <p className="text-gray-500">{hostel.city}</p>
+              <div key={hostel.id} className="bg-white rounded-2xl p-5 shadow-sm flex flex-col">
+                {/* Header */}
+                <div className="flex items-start justify-between mb-3">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-bold text-lg text-gray-900 truncate">{hostel.name}</h3>
+                    <p className="text-gray-500 text-sm">{hostel.city}</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-1 ml-2">
                     <button
                       onClick={() => openEditForm(hostel)}
-                      className="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 transition-colors"
+                      className="p-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200 transition-colors"
+                      title="Editar"
                     >
-                      Editar
+                      ✏️
                     </button>
                     <button
                       onClick={() => handleDelete(hostel)}
-                      className="px-3 py-1.5 rounded-lg text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                      className="p-2 rounded-lg text-sm bg-red-50 hover:bg-red-100 transition-colors"
+                      title="Eliminar"
                     >
-                      Eliminar
+                      🗑️
                     </button>
                   </div>
                 </div>
 
                 {/* Credentials */}
-                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl">
+                <div className="grid grid-cols-2 gap-3 p-3 bg-gray-50 rounded-xl mb-3">
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Código de unión</p>
-                    <p className="font-mono font-bold text-lg" style={{ color: COLORS.cyan }}>
+                    <p className="text-xs text-gray-500 mb-0.5">Código</p>
+                    <p className="font-mono font-bold" style={{ color: COLORS.cyan }}>
                       {hostel.join_code}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">PIN Admin</p>
-                    <p className="font-mono font-bold text-lg" style={{ color: COLORS.pink }}>
+                    <p className="text-xs text-gray-500 mb-0.5">PIN</p>
+                    <p className="font-mono font-bold" style={{ color: COLORS.pink }}>
                       {hostel.staff_pin}
                     </p>
                   </div>
                 </div>
 
                 {/* Quick links */}
-                <div className="flex gap-2 mt-4 text-sm">
-                  <a
-                    href={`/join?code=${hostel.join_code}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3 py-1.5 rounded-lg font-medium text-white"
-                    style={{ backgroundColor: COLORS.cyan }}
-                  >
-                    Ver join →
-                  </a>
+                <div className="grid grid-cols-2 gap-2 mt-auto text-xs">
                   <a
                     href={`/board?code=${hostel.join_code}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-3 py-1.5 rounded-lg font-medium text-white"
+                    className="px-3 py-2 rounded-lg font-medium text-white text-center"
                     style={{ backgroundColor: COLORS.pink }}
                   >
-                    Ver board →
+                    Board
                   </a>
                   <a
                     href={`/tv?code=${hostel.join_code}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-3 py-1.5 rounded-lg font-medium"
+                    className="px-3 py-2 rounded-lg font-medium text-center"
                     style={{ backgroundColor: COLORS.yellow }}
                   >
-                    Ver TV →
+                    TV
+                  </a>
+                  <a
+                    href={`/join?code=${hostel.join_code}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-2 rounded-lg font-medium text-white text-center"
+                    style={{ backgroundColor: COLORS.cyan }}
+                  >
+                    Join
                   </a>
                   <a
                     href={`/admin?code=${hostel.join_code}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-3 py-1.5 rounded-lg font-medium bg-gray-200 hover:bg-gray-300"
+                    className="px-3 py-2 rounded-lg font-medium bg-gray-200 hover:bg-gray-300 text-center"
                   >
-                    Admin hostel →
+                    Admin
                   </a>
                 </div>
               </div>
