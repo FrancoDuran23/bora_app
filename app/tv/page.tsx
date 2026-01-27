@@ -9,7 +9,6 @@ import {
   type Hostel,
   PLAN_CATEGORIES,
 } from "@/lib/supabaseClient";
-import { filterPlansByTimeRange } from "@/lib/timeFilters";
 
 const fontFamily = '"Gv. time", system-ui, sans-serif';
 
@@ -242,19 +241,16 @@ function HostelPill({ hostel }: { hostel: Hostel }) {
   );
 }
 
-// ============ TAB PILLS ============
-function TabPills() {
+// ============ PLAN COUNT BADGE ============
+function PlanCountBadge({ count }: { count: number }) {
   return (
-    <div className="flex gap-2">
-      <div className="px-6 py-2 rounded-full" style={{ backgroundColor: COLORS.cyan }}>
-        <span className="font-bold text-white" style={{ fontFamily }}>Ahora</span>
-      </div>
-      <div className="px-6 py-2 rounded-full" style={{ backgroundColor: COLORS.pink }}>
-        <span className="font-bold text-white" style={{ fontFamily }}>Hoy</span>
-      </div>
-      <div className="px-6 py-2 rounded-full" style={{ backgroundColor: COLORS.yellow }}>
-        <span className="font-bold" style={{ fontFamily, color: COLORS.text }}>Mañana</span>
-      </div>
+    <div
+      className="px-4 py-2 rounded-full"
+      style={{ backgroundColor: COLORS.cyan }}
+    >
+      <span className="font-bold text-white" style={{ fontFamily }}>
+        {count} {count === 1 ? "plan" : "planes"} 🎯
+      </span>
     </div>
   );
 }
@@ -262,45 +258,41 @@ function TabPills() {
 // ============ PLAN CARD ============
 function PlanCard({
   plan,
-  timeSection,
+  colorIndex,
 }: {
   plan: PlanWithParticipants;
-  timeSection: "now" | "today" | "tomorrow";
+  colorIndex: number;
 }) {
   const category = PLAN_CATEGORIES[plan.category] || PLAN_CATEGORIES.other;
   const Illustration = CategoryIllustrations[plan.category] || CategoryIllustrations.other;
 
-  // Gradient colors based on section
-  const gradients = {
-    now: "linear-gradient(135deg, #43DDE2 0%, #06B6D4 50%, #0891B2 100%)",
-    today: "linear-gradient(135deg, #F50CA0 0%, #EC4899 50%, #DB2777 100%)",
-    tomorrow: "linear-gradient(135deg, #F9F940 0%, #FACC15 50%, #EAB308 100%)",
-  };
-
-  const isYellow = timeSection === "tomorrow";
+  // Cycle through colors
+  const colors = [COLORS.cyan, COLORS.pink, COLORS.yellow];
+  const bgColor = colors[colorIndex % 3];
+  const isYellow = colorIndex % 3 === 2;
   const textColor = isYellow ? COLORS.text : "white";
 
   const count = plan.participant_count;
-  const countText = count === 1 ? "1 persona" : `${count} personas`;
   const location = plan.location_text || "";
 
   // Format time
   const planTime = new Date(plan.start_at);
   const timeStr = planTime.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
 
+  // Find creator
+  const creator = plan.participants.find(p => p.guest_id === plan.created_by_guest_id);
+  const creatorName = creator?.display_name || "Anónimo";
+
   return (
-    <div className="rounded-3xl overflow-hidden shadow-lg" style={{ backgroundColor: "white" }}>
-      {/* Gradient header with illustration */}
-      <div
-        className="relative p-4 flex justify-between items-start"
-        style={{ background: gradients[timeSection], minHeight: 110 }}
-      >
-        {/* Left side - Title + Time */}
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-2xl">{category.emoji}</span>
+    <div className="rounded-2xl overflow-hidden shadow-md" style={{ backgroundColor: bgColor }}>
+      {/* Header with illustration */}
+      <div className="relative p-3 flex justify-between items-start" style={{ minHeight: 80 }}>
+        {/* Left side - Category + Time */}
+        <div className="flex-1 z-10">
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="text-xl">{category.emoji}</span>
             <h3
-              className="font-black italic text-2xl leading-tight"
+              className="font-black italic text-lg leading-tight"
               style={{ fontFamily, color: textColor }}
             >
               {category.label}
@@ -308,94 +300,54 @@ function PlanCard({
           </div>
           {/* Time badge */}
           <span
-            className="inline-block px-3 py-1 rounded-full text-sm font-bold"
+            className="inline-block px-2 py-0.5 rounded-full text-xs font-bold"
             style={{
               backgroundColor: "rgba(255,255,255,0.3)",
               color: textColor,
-              backdropFilter: "blur(4px)"
             }}
           >
             🕐 {timeStr}
           </span>
-          {/* Featured badge */}
-          {plan.is_featured && (
-            <span
-              className="inline-block ml-2 px-3 py-1 rounded-full text-xs font-bold"
-              style={{ backgroundColor: COLORS.yellow, color: COLORS.text }}
-            >
-              ⭐ Destacado
-            </span>
-          )}
         </div>
 
         {/* Right side - Illustration */}
-        <div className="w-24 h-20 flex-shrink-0">
+        <div className="w-16 h-14 flex-shrink-0 opacity-80">
           <Illustration />
         </div>
       </div>
 
-      {/* White footer */}
-      <div className="p-4 bg-white">
-        {/* Title if different from category */}
-        {plan.title && plan.title !== category.label && (
-          <p className="font-bold text-base mb-2" style={{ fontFamily, color: COLORS.text }}>
-            {plan.title}
-          </p>
-        )}
-
-        {/* Avatars */}
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex -space-x-2">
-            {plan.participants.slice(0, 5).map((p, i) => (
-              <div
-                key={p.id}
-                className="w-9 h-9 rounded-full border-2 border-white flex items-center justify-center text-sm shadow-sm"
-                style={{
-                  backgroundColor: [COLORS.cyan, COLORS.pink, COLORS.yellow, "#A78BFA", "#34D399"][i % 5],
-                  zIndex: 10 - i,
-                }}
-              >
-                {p.emoji}
-              </div>
-            ))}
-            {count > 5 && (
-              <div
-                className="w-9 h-9 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-xs font-bold shadow-sm"
-                style={{ zIndex: 0, color: COLORS.text }}
-              >
-                +{count - 5}
-              </div>
-            )}
-          </div>
+      {/* Footer */}
+      <div className="px-3 pb-3">
+        {/* Creator */}
+        <div
+          className="flex items-center gap-1.5 mb-1 px-2 py-1 rounded-lg"
+          style={{ backgroundColor: "rgba(255,255,255,0.25)" }}
+        >
+          <span className="text-sm">{creator?.emoji || "👤"}</span>
+          <span className="text-xs font-semibold truncate" style={{ color: textColor }}>
+            {creatorName}
+          </span>
         </div>
 
-        {/* Info text */}
-        <p className="text-sm font-medium text-gray-600" style={{ fontFamily }}>
-          👥 {countText}{location ? ` · 📍 ${location}` : ""}
-        </p>
+        {/* Info row */}
+        <div className="flex items-center justify-between text-xs" style={{ color: textColor, opacity: 0.9 }}>
+          <span className="font-medium">👥 {count}</span>
+          {location && <span className="truncate ml-1">📍 {location}</span>}
+        </div>
       </div>
     </div>
   );
 }
 
-// ============ EMPTY CARD ============
-function EmptyCard({ section }: { section: "now" | "today" | "tomorrow" }) {
-  const colors = {
-    now: COLORS.cyan,
-    today: COLORS.pink,
-    tomorrow: COLORS.yellow,
-  };
-  const labels = { now: "Ahora", today: "Hoy", tomorrow: "Mañana" };
-
+// ============ EMPTY STATE ============
+function EmptyState() {
   return (
-    <div
-      className="rounded-3xl p-6 flex flex-col items-center justify-center opacity-50"
-      style={{ backgroundColor: colors[section], minHeight: 140 }}
-    >
-      <span className="text-3xl mb-2">🌴</span>
-      <p className="text-white font-medium text-center" style={{ fontFamily, color: section === "tomorrow" ? COLORS.text : "white" }}>
-        Sin planes {labels[section].toLowerCase()}
+    <div className="col-span-full flex flex-col items-center justify-center py-16">
+      <span className="text-6xl mb-4">🌴</span>
+      <p className="text-xl font-bold text-gray-400" style={{ fontFamily }}>
+        No hay planes todavía
       </p>
+      <p className="text-gray-400">¡Escaneá el QR para crear uno!</p>
     </div>
   );
 }
@@ -407,9 +359,9 @@ function BottomBar({ code }: { code: string }) {
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(joinUrl)}`;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white shadow-lg px-6 py-4 flex items-center gap-5">
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white shadow-2xl px-6 py-3 flex items-center gap-5 border-t border-gray-100">
       {/* QR - Real generated QR code */}
-      <div className="w-20 h-20 rounded-xl overflow-hidden bg-white p-1 border border-gray-200">
+      <div className="w-16 h-16 rounded-lg overflow-hidden bg-white p-0.5 border border-gray-200 flex-shrink-0">
         <img
           src={qrUrl}
           alt={`QR code para ${joinUrl}`}
@@ -418,16 +370,16 @@ function BottomBar({ code }: { code: string }) {
       </div>
 
       {/* Text */}
-      <div className="flex-1">
-        <p className="text-xl font-bold" style={{ fontFamily, color: COLORS.text }}>
-          Escaneá el QR para sumarte <span className="text-2xl">📱</span>
+      <div className="flex-1 min-w-0">
+        <p className="text-lg font-bold truncate" style={{ fontFamily, color: COLORS.text }}>
+          Escaneá el QR para sumarte 📱
         </p>
-        <p className="text-sm text-gray-500 mt-1">{joinUrl}</p>
+        <p className="text-xs text-gray-400 truncate">{joinUrl}</p>
       </div>
 
       {/* Code display */}
       <div
-        className="px-8 py-4 rounded-2xl font-bold text-white text-2xl"
+        className="px-6 py-3 rounded-xl font-bold text-white text-xl flex-shrink-0"
         style={{ backgroundColor: COLORS.pink, fontFamily }}
       >
         {code}
@@ -511,9 +463,10 @@ function TVContent() {
     return () => { supabase.removeChannel(channel); };
   }, [hostel?.id, fetchPlans]);
 
-  const nowPlans = filterPlansByTimeRange(plans, "now");
-  const todayPlans = filterPlansByTimeRange(plans, "today");
-  const tomorrowPlans = filterPlansByTimeRange(plans, "tomorrow");
+  // All plans sorted by time
+  const allPlans = [...plans].sort((a, b) =>
+    new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
+  );
 
   if (loading && !hostel) {
     return (
@@ -524,79 +477,25 @@ function TVContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 pb-28" style={{ fontFamily }}>
+    <div className="min-h-screen bg-gray-50 p-4 pb-24" style={{ fontFamily }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <LogoSticker />
-        {hostel && <HostelPill hostel={hostel} />}
+        <div className="flex items-center gap-3">
+          {hostel && <HostelPill hostel={hostel} />}
+          <PlanCountBadge count={allPlans.length} />
+        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="mb-6">
-        <TabPills />
-      </div>
-
-      {/* Section Headers + Cards */}
-      <div className="space-y-6">
-        {/* AHORA Section */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-2xl">⚡</span>
-            <h2 className="text-xl font-bold" style={{ fontFamily, color: COLORS.text }}>Ahora</h2>
-            <span className="px-3 py-1 rounded-full text-sm font-medium" style={{ backgroundColor: COLORS.cyan, color: "white" }}>
-              {nowPlans.length} planes
-            </span>
-          </div>
-          <div className="grid grid-cols-4 gap-4">
-            {nowPlans.length > 0 ? (
-              nowPlans.slice(0, 4).map((plan) => (
-                <PlanCard key={`now-${plan.id}`} plan={plan} timeSection="now" />
-              ))
-            ) : (
-              <EmptyCard section="now" />
-            )}
-          </div>
-        </div>
-
-        {/* HOY Section */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-2xl">☀️</span>
-            <h2 className="text-xl font-bold" style={{ fontFamily, color: COLORS.text }}>Hoy</h2>
-            <span className="px-3 py-1 rounded-full text-sm font-medium" style={{ backgroundColor: COLORS.pink, color: "white" }}>
-              {todayPlans.length} planes
-            </span>
-          </div>
-          <div className="grid grid-cols-4 gap-4">
-            {todayPlans.length > 0 ? (
-              todayPlans.slice(0, 4).map((plan) => (
-                <PlanCard key={`today-${plan.id}`} plan={plan} timeSection="today" />
-              ))
-            ) : (
-              <EmptyCard section="today" />
-            )}
-          </div>
-        </div>
-
-        {/* MAÑANA Section */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-2xl">🌅</span>
-            <h2 className="text-xl font-bold" style={{ fontFamily, color: COLORS.text }}>Mañana</h2>
-            <span className="px-3 py-1 rounded-full text-sm font-medium" style={{ backgroundColor: COLORS.yellow, color: COLORS.text }}>
-              {tomorrowPlans.length} planes
-            </span>
-          </div>
-          <div className="grid grid-cols-4 gap-4">
-            {tomorrowPlans.length > 0 ? (
-              tomorrowPlans.slice(0, 4).map((plan) => (
-                <PlanCard key={`tomorrow-${plan.id}`} plan={plan} timeSection="tomorrow" />
-              ))
-            ) : (
-              <EmptyCard section="tomorrow" />
-            )}
-          </div>
-        </div>
+      {/* Plans Grid - compact */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        {allPlans.length > 0 ? (
+          allPlans.map((plan, index) => (
+            <PlanCard key={plan.id} plan={plan} colorIndex={index} />
+          ))
+        ) : (
+          <EmptyState />
+        )}
       </div>
 
       <BottomBar code={code} />
