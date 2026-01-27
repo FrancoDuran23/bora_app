@@ -284,6 +284,10 @@ function PlanCard({
   const countText = count === 1 ? "1 persona" : `${count} personas`;
   const location = plan.location_text || "";
 
+  // Format time
+  const planTime = new Date(plan.start_at);
+  const timeStr = planTime.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+
   return (
     <div className="rounded-3xl overflow-hidden shadow-lg" style={{ backgroundColor: "white" }}>
       {/* Gradient header with illustration */}
@@ -291,21 +295,35 @@ function PlanCard({
         className="relative p-4 flex justify-between items-start"
         style={{ background: gradients[timeSection], minHeight: 110 }}
       >
-        {/* Left side - Title */}
+        {/* Left side - Title + Time */}
         <div className="flex-1">
-          <h3
-            className="font-black italic text-2xl leading-tight"
-            style={{ fontFamily, color: textColor }}
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-2xl">{category.emoji}</span>
+            <h3
+              className="font-black italic text-2xl leading-tight"
+              style={{ fontFamily, color: textColor }}
+            >
+              {category.label}
+            </h3>
+          </div>
+          {/* Time badge */}
+          <span
+            className="inline-block px-3 py-1 rounded-full text-sm font-bold"
+            style={{
+              backgroundColor: "rgba(255,255,255,0.3)",
+              color: textColor,
+              backdropFilter: "blur(4px)"
+            }}
           >
-            {category.label}
-          </h3>
+            🕐 {timeStr}
+          </span>
           {/* Featured badge */}
           {plan.is_featured && (
             <span
-              className="inline-block mt-2 px-3 py-1 rounded-full text-xs font-bold"
+              className="inline-block ml-2 px-3 py-1 rounded-full text-xs font-bold"
               style={{ backgroundColor: COLORS.yellow, color: COLORS.text }}
             >
-              Destacado
+              ⭐ Destacado
             </span>
           )}
         </div>
@@ -318,8 +336,15 @@ function PlanCard({
 
       {/* White footer */}
       <div className="p-4 bg-white">
+        {/* Title if different from category */}
+        {plan.title && plan.title !== category.label && (
+          <p className="font-bold text-base mb-2" style={{ fontFamily, color: COLORS.text }}>
+            {plan.title}
+          </p>
+        )}
+
         {/* Avatars */}
-        <div className="flex items-center mb-2">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex -space-x-2">
             {plan.participants.slice(0, 5).map((p, i) => (
               <div
@@ -346,7 +371,7 @@ function PlanCard({
 
         {/* Info text */}
         <p className="text-sm font-medium text-gray-600" style={{ fontFamily }}>
-          {countText}{location ? ` - ${location}` : ""}
+          👥 {countText}{location ? ` · 📍 ${location}` : ""}
         </p>
       </div>
     </div>
@@ -377,48 +402,35 @@ function EmptyCard({ section }: { section: "now" | "today" | "tomorrow" }) {
 
 // ============ BOTTOM BAR ============
 function BottomBar({ code }: { code: string }) {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://bora-app-s42l.vercel.app";
+  const joinUrl = `${baseUrl}/join?code=${code}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(joinUrl)}`;
+
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white shadow-lg px-6 py-4 flex items-center gap-5">
-      {/* QR */}
-      <div className="w-16 h-16 rounded-xl overflow-hidden bg-white p-1 border border-gray-200">
-        <svg viewBox="0 0 50 50" className="w-full h-full" fill="#1e293b">
-          <rect x="2" y="2" width="14" height="14" />
-          <rect x="5" y="5" width="8" height="8" fill="white" />
-          <rect x="7" y="7" width="4" height="4" />
-          <rect x="34" y="2" width="14" height="14" />
-          <rect x="37" y="5" width="8" height="8" fill="white" />
-          <rect x="39" y="7" width="4" height="4" />
-          <rect x="2" y="34" width="14" height="14" />
-          <rect x="5" y="37" width="8" height="8" fill="white" />
-          <rect x="7" y="39" width="4" height="4" />
-          <rect x="20" y="2" width="4" height="4" />
-          <rect x="20" y="10" width="4" height="4" />
-          <rect x="20" y="20" width="4" height="4" />
-          <rect x="2" y="20" width="4" height="4" />
-          <rect x="10" y="20" width="4" height="4" />
-          <rect x="28" y="20" width="4" height="4" />
-          <rect x="20" y="34" width="4" height="4" />
-          <rect x="28" y="28" width="4" height="4" />
-          <rect x="34" y="34" width="4" height="4" />
-          <rect x="42" y="34" width="4" height="4" />
-          <rect x="34" y="42" width="4" height="4" />
-          <rect x="42" y="42" width="4" height="4" />
-        </svg>
+      {/* QR - Real generated QR code */}
+      <div className="w-20 h-20 rounded-xl overflow-hidden bg-white p-1 border border-gray-200">
+        <img
+          src={qrUrl}
+          alt={`QR code para ${joinUrl}`}
+          className="w-full h-full object-contain"
+        />
       </div>
 
       {/* Text */}
       <div className="flex-1">
         <p className="text-xl font-bold" style={{ fontFamily, color: COLORS.text }}>
-          Sumate a un plan o proponé el tuyo <span className="text-2xl">🎉</span>
+          Escaneá el QR para sumarte <span className="text-2xl">📱</span>
         </p>
+        <p className="text-sm text-gray-500 mt-1">{joinUrl}</p>
       </div>
 
-      {/* Button style link */}
+      {/* Code display */}
       <div
-        className="px-6 py-3 rounded-full font-bold text-white"
+        className="px-8 py-4 rounded-2xl font-bold text-white text-2xl"
         style={{ backgroundColor: COLORS.pink, fontFamily }}
       >
-        /join?code={code}
+        {code}
       </div>
     </div>
   );
@@ -524,55 +536,68 @@ function TVContent() {
         <TabPills />
       </div>
 
-      {/* Cards Grid - 4 columns */}
-      <div className="grid grid-cols-4 gap-5">
-        {/* Ahora cards */}
-        {nowPlans.length > 0 ? (
-          nowPlans.slice(0, 2).map((plan) => (
-            <PlanCard key={plan.id} plan={plan} timeSection="now" />
-          ))
-        ) : (
-          <EmptyCard section="now" />
-        )}
-
-        {/* Hoy cards */}
-        {todayPlans.length > 0 ? (
-          todayPlans.slice(0, 2).map((plan) => (
-            <PlanCard key={plan.id} plan={plan} timeSection="today" />
-          ))
-        ) : (
-          <EmptyCard section="today" />
-        )}
-
-        {/* Mañana cards */}
-        {tomorrowPlans.length > 0 ? (
-          tomorrowPlans.slice(0, 2).map((plan) => (
-            <PlanCard key={plan.id} plan={plan} timeSection="tomorrow" />
-          ))
-        ) : (
-          <EmptyCard section="tomorrow" />
-        )}
-
-        {/* Fill remaining spots if needed */}
-        {nowPlans.length === 1 && todayPlans.length > 0 && (
-          <PlanCard plan={todayPlans[0]} timeSection="today" />
-        )}
-      </div>
-
-      {/* Second row if there are more plans */}
-      {(nowPlans.length > 2 || todayPlans.length > 2 || tomorrowPlans.length > 2) && (
-        <div className="grid grid-cols-4 gap-5 mt-5">
-          {nowPlans.slice(2, 4).map((plan) => (
-            <PlanCard key={plan.id} plan={plan} timeSection="now" />
-          ))}
-          {todayPlans.slice(2, 4).map((plan) => (
-            <PlanCard key={plan.id} plan={plan} timeSection="today" />
-          ))}
-          {tomorrowPlans.slice(2, 4).map((plan) => (
-            <PlanCard key={plan.id} plan={plan} timeSection="tomorrow" />
-          ))}
+      {/* Section Headers + Cards */}
+      <div className="space-y-6">
+        {/* AHORA Section */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-2xl">⚡</span>
+            <h2 className="text-xl font-bold" style={{ fontFamily, color: COLORS.text }}>Ahora</h2>
+            <span className="px-3 py-1 rounded-full text-sm font-medium" style={{ backgroundColor: COLORS.cyan, color: "white" }}>
+              {nowPlans.length} planes
+            </span>
+          </div>
+          <div className="grid grid-cols-4 gap-4">
+            {nowPlans.length > 0 ? (
+              nowPlans.slice(0, 4).map((plan) => (
+                <PlanCard key={`now-${plan.id}`} plan={plan} timeSection="now" />
+              ))
+            ) : (
+              <EmptyCard section="now" />
+            )}
+          </div>
         </div>
-      )}
+
+        {/* HOY Section */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-2xl">☀️</span>
+            <h2 className="text-xl font-bold" style={{ fontFamily, color: COLORS.text }}>Hoy</h2>
+            <span className="px-3 py-1 rounded-full text-sm font-medium" style={{ backgroundColor: COLORS.pink, color: "white" }}>
+              {todayPlans.length} planes
+            </span>
+          </div>
+          <div className="grid grid-cols-4 gap-4">
+            {todayPlans.length > 0 ? (
+              todayPlans.slice(0, 4).map((plan) => (
+                <PlanCard key={`today-${plan.id}`} plan={plan} timeSection="today" />
+              ))
+            ) : (
+              <EmptyCard section="today" />
+            )}
+          </div>
+        </div>
+
+        {/* MAÑANA Section */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-2xl">🌅</span>
+            <h2 className="text-xl font-bold" style={{ fontFamily, color: COLORS.text }}>Mañana</h2>
+            <span className="px-3 py-1 rounded-full text-sm font-medium" style={{ backgroundColor: COLORS.yellow, color: COLORS.text }}>
+              {tomorrowPlans.length} planes
+            </span>
+          </div>
+          <div className="grid grid-cols-4 gap-4">
+            {tomorrowPlans.length > 0 ? (
+              tomorrowPlans.slice(0, 4).map((plan) => (
+                <PlanCard key={`tomorrow-${plan.id}`} plan={plan} timeSection="tomorrow" />
+              ))
+            ) : (
+              <EmptyCard section="tomorrow" />
+            )}
+          </div>
+        </div>
+      </div>
 
       <BottomBar code={code} />
     </div>
