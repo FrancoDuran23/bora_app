@@ -1,5 +1,6 @@
 "use client";
 
+import type React from "react";
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -172,7 +173,7 @@ function OtherIllustration() {
   );
 }
 
-const CategoryIllustrations: Record<string, () => JSX.Element> = {
+const CategoryIllustrations: Record<string, () => React.ReactElement> = {
   surf: SurfIllustration,
   beach: BeachIllustration,
   dinner: DinnerIllustration,
