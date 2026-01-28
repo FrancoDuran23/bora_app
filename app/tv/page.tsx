@@ -9,6 +9,7 @@ import {
   type Hostel,
   PLAN_CATEGORIES,
 } from "@/lib/supabaseClient";
+import { detectLanguageFromLocation, t, getCategoryLabel, type Language } from "@/lib/i18n";
 
 const fontFamily = '"Gv. time", system-ui, sans-serif';
 
@@ -186,38 +187,38 @@ const CategoryIllustrations: Record<string, () => React.ReactElement> = {
 // ============ LOGO ============
 function LogoSticker() {
   return (
-    <div className="relative" style={{ width: 150, height: 60 }}>
+    <div className="relative" style={{ width: 200, height: 80 }}>
       <div
         className="absolute rounded-2xl"
         style={{
-          width: 130,
-          height: 48,
+          width: 180,
+          height: 65,
           backgroundColor: COLORS.yellow,
-          top: 8,
-          left: 12,
+          top: 10,
+          left: 14,
           transform: "rotate(4deg)",
         }}
       />
       <div
         className="absolute rounded-2xl"
         style={{
-          width: 130,
-          height: 48,
+          width: 180,
+          height: 65,
           backgroundColor: COLORS.cyan,
-          top: 4,
-          left: 6,
+          top: 5,
+          left: 7,
           transform: "rotate(-2deg)",
         }}
       />
       <div
         className="absolute rounded-2xl flex items-center justify-center"
         style={{
-          width: 130,
-          height: 48,
+          width: 180,
+          height: 65,
           backgroundColor: COLORS.pink,
         }}
       >
-        <span className="text-white font-black italic" style={{ fontFamily, fontSize: "1.8rem" }}>
+        <span className="text-white font-black italic" style={{ fontFamily, fontSize: "2.5rem" }}>
           Bora!
         </span>
       </div>
@@ -225,51 +226,98 @@ function LogoSticker() {
   );
 }
 
-// ============ HOSTEL PILL ============
-function HostelPill({ hostel }: { hostel: Hostel }) {
+// ============ HOSTEL NAME ============
+function HostelName({ name }: { name: string }) {
   return (
     <div
-      className="flex items-center gap-3 px-5 py-2 rounded-full"
-      style={{ backgroundColor: "rgba(67,221,226,0.15)", border: "1px solid rgba(67,221,226,0.3)" }}
+      className="px-6 py-2 rounded-2xl shadow-md"
+      style={{
+        background: `linear-gradient(135deg, ${COLORS.pink} 0%, ${COLORS.cyan} 100%)`,
+      }}
     >
-      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.yellow }} />
-      <div>
-        <p className="font-bold text-base" style={{ fontFamily, color: COLORS.text }}>{hostel.name}</p>
-        <p className="text-sm text-gray-500">{hostel.city}</p>
+      <p className="font-black text-xl text-white text-center" style={{ fontFamily }}>
+        {name}
+      </p>
+    </div>
+  );
+}
+
+// ============ HOSTEL LOCATION ============
+function HostelLocation({ city }: { city: string }) {
+  return (
+    <div
+      className="px-4 py-1.5 rounded-full"
+      style={{ backgroundColor: COLORS.yellow }}
+    >
+      <p className="font-bold text-sm" style={{ fontFamily, color: COLORS.text }}>
+        📍 {city}
+      </p>
+    </div>
+  );
+}
+
+// ============ COLOR LEGEND ============
+function ColorLegend({ lang }: { lang: Language }) {
+  return (
+    <div className="grid grid-cols-12 gap-3">
+      <div className="col-span-4 px-4 py-2 rounded-full text-center" style={{ backgroundColor: COLORS.cyan }}>
+        <span className="font-bold text-white text-lg" style={{ fontFamily }}>⚡ {t("tabs.now", lang)}</span>
+      </div>
+      <div className="col-span-4 px-4 py-2 rounded-full text-center" style={{ backgroundColor: COLORS.pink }}>
+        <span className="font-bold text-white text-lg" style={{ fontFamily }}>☀️ {t("tabs.today", lang)}</span>
+      </div>
+      <div className="col-span-4 px-4 py-2 rounded-full text-center" style={{ backgroundColor: COLORS.yellow }}>
+        <span className="font-bold text-lg" style={{ fontFamily, color: COLORS.text }}>🌅 {t("tabs.tomorrow", lang)}</span>
       </div>
     </div>
   );
 }
 
-// ============ PLAN COUNT BADGE ============
-function PlanCountBadge({ count }: { count: number }) {
-  return (
-    <div
-      className="px-4 py-2 rounded-full"
-      style={{ backgroundColor: COLORS.cyan }}
-    >
-      <span className="font-bold text-white" style={{ fontFamily }}>
-        {count} {count === 1 ? "plan" : "planes"} 🎯
-      </span>
-    </div>
-  );
+// Helper to determine time section
+function getTimeSection(startAt: string): "now" | "today" | "tomorrow" {
+  const now = new Date();
+  const planTime = new Date(startAt);
+  const diffMs = planTime.getTime() - now.getTime();
+  const diffHours = diffMs / (1000 * 60 * 60);
+
+  // "Now" = within next 2 hours
+  if (diffHours <= 2 && diffHours >= -1) return "now";
+
+  // Check if same day
+  const isToday = planTime.toDateString() === now.toDateString();
+  if (isToday) return "today";
+
+  // Check if tomorrow
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const isTomorrow = planTime.toDateString() === tomorrow.toDateString();
+  if (isTomorrow) return "tomorrow";
+
+  // Default to today for anything else upcoming
+  return "today";
 }
 
 // ============ PLAN CARD ============
 function PlanCard({
   plan,
-  colorIndex,
+  lang,
 }: {
   plan: PlanWithParticipants;
-  colorIndex: number;
+  lang: Language;
 }) {
   const category = PLAN_CATEGORIES[plan.category] || PLAN_CATEGORIES.other;
+  const categoryLabel = getCategoryLabel(plan.category, lang);
   const Illustration = CategoryIllustrations[plan.category] || CategoryIllustrations.other;
 
-  // Cycle through colors
-  const colors = [COLORS.cyan, COLORS.pink, COLORS.yellow];
-  const bgColor = colors[colorIndex % 3];
-  const isYellow = colorIndex % 3 === 2;
+  // Color based on time section
+  const timeSection = getTimeSection(plan.start_at);
+  const colorMap = {
+    now: COLORS.cyan,
+    today: COLORS.pink,
+    tomorrow: COLORS.yellow,
+  };
+  const bgColor = colorMap[timeSection];
+  const isYellow = timeSection === "tomorrow";
   const textColor = isYellow ? COLORS.text : "white";
 
   const count = plan.participant_count;
@@ -284,23 +332,23 @@ function PlanCard({
   const creatorName = creator?.display_name || "Anónimo";
 
   return (
-    <div className="rounded-2xl overflow-hidden shadow-md" style={{ backgroundColor: bgColor }}>
+    <div className="rounded-2xl overflow-hidden shadow-lg" style={{ backgroundColor: bgColor }}>
       {/* Header with illustration */}
       <div className="relative p-3 flex justify-between items-start" style={{ minHeight: 80 }}>
         {/* Left side - Category + Time */}
         <div className="flex-1 z-10">
           <div className="flex items-center gap-1.5 mb-1">
-            <span className="text-xl">{category.emoji}</span>
+            <span className="text-2xl">{category.emoji}</span>
             <h3
-              className="font-black italic text-lg leading-tight"
+              className="font-black italic text-xl leading-tight"
               style={{ fontFamily, color: textColor }}
             >
-              {category.label}
+              {categoryLabel}
             </h3>
           </div>
           {/* Time badge */}
           <span
-            className="inline-block px-2 py-0.5 rounded-full text-xs font-bold"
+            className="inline-block px-2 py-0.5 rounded-full text-sm font-bold"
             style={{
               backgroundColor: "rgba(255,255,255,0.3)",
               color: textColor,
@@ -320,19 +368,50 @@ function PlanCard({
       <div className="px-3 pb-3">
         {/* Creator */}
         <div
-          className="flex items-center gap-1.5 mb-1 px-2 py-1 rounded-lg"
+          className="flex items-center gap-1.5 mb-2 px-2 py-1 rounded-lg"
           style={{ backgroundColor: "rgba(255,255,255,0.25)" }}
         >
-          <span className="text-sm">{creator?.emoji || "👤"}</span>
-          <span className="text-xs font-semibold truncate" style={{ color: textColor }}>
+          <span className="text-base">{creator?.emoji || "👤"}</span>
+          <span className="text-sm font-semibold truncate" style={{ color: textColor }}>
             {creatorName}
           </span>
         </div>
 
-        {/* Info row */}
-        <div className="flex items-center justify-between text-xs" style={{ color: textColor, opacity: 0.9 }}>
-          <span className="font-medium">👥 {count}</span>
-          {location && <span className="truncate ml-1">📍 {location}</span>}
+        {/* Participant bubbles */}
+        <div className="flex items-center justify-between">
+          <div className="flex -space-x-1.5">
+            {plan.participants.slice(0, 4).map((p, i) => (
+              <div
+                key={p.id}
+                className="w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm shadow-sm"
+                style={{
+                  backgroundColor: "rgba(255,255,255,0.9)",
+                  borderColor: bgColor,
+                  zIndex: 10 - i,
+                }}
+              >
+                {p.emoji}
+              </div>
+            ))}
+            {count > 4 && (
+              <div
+                className="w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-bold shadow-sm"
+                style={{
+                  backgroundColor: "rgba(255,255,255,0.9)",
+                  borderColor: bgColor,
+                  zIndex: 0,
+                  color: COLORS.text,
+                }}
+              >
+                +{count - 4}
+              </div>
+            )}
+          </div>
+          {location && (
+            <span className="text-xs truncate ml-2" style={{ color: textColor, opacity: 0.9 }}>
+              📍 {location}
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -340,28 +419,41 @@ function PlanCard({
 }
 
 // ============ EMPTY STATE ============
-function EmptyState() {
+function EmptyState({ lang }: { lang: Language }) {
+  const messages = {
+    es: { title: "No hay planes todavía", subtitle: "¡Escaneá el QR para crear uno!" },
+    pt: { title: "Ainda não há planos", subtitle: "Escaneie o QR para criar um!" },
+    en: { title: "No plans yet", subtitle: "Scan the QR to create one!" },
+  };
+  const msg = messages[lang];
+
   return (
     <div className="col-span-full flex flex-col items-center justify-center py-16">
       <span className="text-6xl mb-4">🌴</span>
-      <p className="text-xl font-bold text-gray-400" style={{ fontFamily }}>
-        No hay planes todavía
+      <p className="text-2xl font-bold text-gray-400" style={{ fontFamily }}>
+        {msg.title}
       </p>
-      <p className="text-gray-400">¡Escaneá el QR para crear uno!</p>
+      <p className="text-lg text-gray-400">{msg.subtitle}</p>
     </div>
   );
 }
 
 // ============ BOTTOM BAR ============
-function BottomBar({ code }: { code: string }) {
+function BottomBar({ code, lang }: { code: string; lang: Language }) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://bora-app-s42l.vercel.app";
   const joinUrl = `${baseUrl}/join?code=${code}`;
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(joinUrl)}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(joinUrl)}`;
+
+  const messages = {
+    es: "Escaneá el QR para sumarte",
+    pt: "Escaneie o QR para participar",
+    en: "Scan the QR to join",
+  };
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-white shadow-2xl px-6 py-3 flex items-center gap-5 border-t border-gray-100">
       {/* QR - Real generated QR code */}
-      <div className="w-16 h-16 rounded-lg overflow-hidden bg-white p-0.5 border border-gray-200 flex-shrink-0">
+      <div className="w-20 h-20 rounded-xl overflow-hidden bg-white p-1 border-2 border-gray-200 flex-shrink-0">
         <img
           src={qrUrl}
           alt={`QR code para ${joinUrl}`}
@@ -371,15 +463,15 @@ function BottomBar({ code }: { code: string }) {
 
       {/* Text */}
       <div className="flex-1 min-w-0">
-        <p className="text-lg font-bold truncate" style={{ fontFamily, color: COLORS.text }}>
-          Escaneá el QR para sumarte 📱
+        <p className="text-xl font-bold" style={{ fontFamily, color: COLORS.text }}>
+          {messages[lang]} 📱
         </p>
-        <p className="text-xs text-gray-400 truncate">{joinUrl}</p>
+        <p className="text-sm text-gray-400 truncate">{joinUrl}</p>
       </div>
 
       {/* Code display */}
       <div
-        className="px-6 py-3 rounded-xl font-bold text-white text-xl flex-shrink-0"
+        className="px-6 py-3 rounded-2xl font-bold text-white text-2xl flex-shrink-0"
         style={{ backgroundColor: COLORS.pink, fontFamily }}
       >
         {code}
@@ -468,6 +560,9 @@ function TVContent() {
     new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
   );
 
+  // Detect language from hostel location
+  const lang: Language = hostel ? detectLanguageFromLocation(hostel.city) : "es";
+
   if (loading && !hostel) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -477,28 +572,31 @@ function TVContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 pb-24" style={{ fontFamily }}>
+    <div className="min-h-screen bg-gray-50 p-5 pb-28" style={{ fontFamily }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <LogoSticker />
-        <div className="flex items-center gap-3">
-          {hostel && <HostelPill hostel={hostel} />}
-          <PlanCountBadge count={allPlans.length} />
-        </div>
+        {hostel && <HostelName name={hostel.name} />}
+        {hostel && <HostelLocation city={hostel.city} />}
       </div>
 
-      {/* Plans Grid - compact */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+      {/* Color Legend Row */}
+      <div className="mb-5">
+        <ColorLegend lang={lang} />
+      </div>
+
+      {/* Plans Grid - larger cards for TV */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {allPlans.length > 0 ? (
-          allPlans.map((plan, index) => (
-            <PlanCard key={plan.id} plan={plan} colorIndex={index} />
+          allPlans.map((plan) => (
+            <PlanCard key={plan.id} plan={plan} lang={lang} />
           ))
         ) : (
-          <EmptyState />
+          <EmptyState lang={lang} />
         )}
       </div>
 
-      <BottomBar code={code} />
+      <BottomBar code={code} lang={lang} />
     </div>
   );
 }
